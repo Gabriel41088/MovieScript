@@ -11,32 +11,40 @@
 #include <QGroupBox>
 #include <QTabWidget>
 #include <QMessageBox>
+#include <QStringList>
+#include <QTableWidgetItem>
 
 #include "lexer.h"
+#include "parser.h"
 
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
 
     QWidget ventana;
-    ventana.setWindowTitle("MovieScript - Analizador Lexico");
+    ventana.setWindowTitle(
+        "MovieScript - Analizador Lexico y Sintactico"
+    );
     ventana.resize(1150, 800);
 
     QVBoxLayout *layoutPrincipal =
         new QVBoxLayout(&ventana);
 
     QLabel *titulo =
-        new QLabel("MOVIESCRIPT - ANALIZADOR LEXICO");
+        new QLabel(
+            "MOVIESCRIPT - ANALIZADOR LEXICO Y SINTACTICO"
+        );
 
     titulo->setStyleSheet(
-        "font-size: 26px;"
+        "font-size: 24px;"
         "font-weight: bold;"
         "padding: 10px;"
     );
 
     QLabel *descripcion =
         new QLabel(
-            "Analizador lexico desarrollado con FLEX"
+            "Analizador lexico con FLEX y analizador "
+            "sintactico descendente recursivo en C++."
         );
 
     QTabWidget *pestanas =
@@ -57,6 +65,15 @@ int main(int argc, char *argv[])
 
     QTextEdit *editor =
         new QTextEdit();
+
+    editor->setPlaceholderText(
+        "Escribe aqui tu programa MovieScript..."
+    );
+
+    editor->setStyleSheet(
+        "font-family: Consolas, monospace;"
+        "font-size: 14px;"
+    );
 
     editor->setPlainText(
         "MOVIE \"El Viaje\"\n"
@@ -101,7 +118,6 @@ int main(int argc, char *argv[])
     tabla->setColumnCount(3);
 
     QStringList encabezados;
-
     encabezados << "Lexema"
                 << "Token"
                 << "Linea";
@@ -115,8 +131,13 @@ int main(int argc, char *argv[])
              QHeaderView::Stretch
          );
 
+    tabla->setAlternatingRowColors(true);
+    tabla->setEditTriggers(
+        QAbstractItemView::NoEditTriggers
+    );
+
     QGroupBox *informacion =
-        new QGroupBox("Resultado del analisis");
+        new QGroupBox("Resultados del analisis");
 
     QHBoxLayout *infoLayout =
         new QHBoxLayout(informacion);
@@ -125,14 +146,18 @@ int main(int argc, char *argv[])
         new QLabel("Tokens: 0");
 
     QLabel *totalErrores =
-        new QLabel("Errores: 0");
+        new QLabel("Errores lexicos: 0");
 
     QLabel *estado =
-        new QLabel("Estado: Listo");
+        new QLabel("Lexico: Sin analizar");
+
+    QLabel *estadoSintactico =
+        new QLabel("Sintaxis: Sin analizar");
 
     infoLayout->addWidget(totalTokens);
     infoLayout->addWidget(totalErrores);
     infoLayout->addWidget(estado);
+    infoLayout->addWidget(estadoSintactico);
 
     layoutAnalizador->addWidget(codigoLabel);
     layoutAnalizador->addWidget(editor);
@@ -141,7 +166,7 @@ int main(int argc, char *argv[])
     layoutAnalizador->addWidget(informacion);
 
     // =====================================================
-    // PESTAÑA 2: AUTOMATA
+    // PESTAÑA 2: AUTOMATA LEXICO
     // =====================================================
 
     QWidget *paginaAutomata =
@@ -164,8 +189,8 @@ int main(int argc, char *argv[])
     QLabel *explicacion =
         new QLabel(
             "FLEX utiliza expresiones regulares para "
-            "generar internamente un automata finito "
-            "que reconoce los diferentes tipos de lexemas."
+            "generar internamente el automata que reconoce "
+            "los lexemas del lenguaje MovieScript."
         );
 
     explicacion->setWordWrap(true);
@@ -175,80 +200,171 @@ int main(int argc, char *argv[])
 
     automata->setReadOnly(true);
 
-    automata->setPlainText(
-        "                         MOVIESCRIPT\n"
-        "                    AUTOMATA LEXICO\n"
-        "\n"
-        "                              letra / _\n"
-        "                         ┌───────────────────┐\n"
-        "                         │                   ▼\n"
-        "                      (INICIO) ───────> (IDENTIFICADOR)\n"
-        "                         │                   ▲\n"
-        "                         │                   │\n"
-        "                         │             letra / digito / _\n"
-        "                         │\n"
-        "                         │ digito\n"
-        "                         ▼\n"
-        "                      (NUMERO)\n"
-        "                         ▲\n"
-        "                         │\n"
-        "                         └────── digito\n"
-        "\n"
-        "                         (INICIO)\n"
-        "                            │\n"
-        "                            │ \"\n"
-        "                            ▼\n"
-        "                         (CADENA)\n"
-        "                            │\n"
-        "                            │ caracteres\n"
-        "                            │ diferentes de \"\n"
-        "                            └───────────────┐\n"
-        "                                            │\n"
-        "                                            │ \"\n"
-        "                                            ▼\n"
-        "                                      [ACEPTACION]\n"
-        "\n"
-        "                         (INICIO)\n"
-        "                            │\n"
-        "                            ├── espacio/tab ──> IGNORAR\n"
-        "                            │\n"
-        "                            ├── // ──────────> COMENTARIO\n"
-        "                            │\n"
-        "                            └── otro ────────> ERROR_LEXICO\n"
-        "\n"
-        "  PALABRAS RESERVADAS:\n"
-        "  MOVIE  SCENE  CHARACTER  SAY  CAMERA\n"
-        "  MUSIC  ACTION  LOCATION  CUT  END\n"
-        "\n"
-        "  REGLAS PRINCIPALES:\n"
-        "  [0-9]+                         -> NUMERO\n"
-        "  \"...\"                         -> CADENA\n"
-        "  [a-zA-Z_][a-zA-Z0-9_]*       -> IDENTIFICADOR\n"
-        "  //...                          -> COMENTARIO\n"
-        "  otro caracter                  -> ERROR_LEXICO\n"
-    );
-
     automata->setStyleSheet(
         "font-family: Consolas, monospace;"
         "font-size: 14px;"
     );
 
-    QLabel *nota =
+    automata->setPlainText(
+        "                  MOVIESCRIPT\n"
+        "             AUTOMATA LEXICO\n"
+        "\n"
+        "INICIO\n"
+        "  |\n"
+        "  | letra o guion bajo\n"
+        "  v\n"
+        "IDENTIFICADOR\n"
+        "  letras, digitos y guion bajo\n"
+        "\n"
+        "  |\n"
+        "  | digito\n"
+        "  v\n"
+        "NUMERO\n"
+        "  acepta uno o mas digitos\n"
+        "\n"
+        "INICIO\n"
+        "  |\n"
+        "  | comilla doble (\")\n"
+        "  v\n"
+        "CADENA\n"
+        "  |\n"
+        "  +-- espacios y tabulaciones -> IGNORAR\n"
+        "  |\n"
+        "  +-- salto de linea -> CONTAR LINEA\n"
+        "  |\n"
+        "  +-- // -> COMENTARIO\n"
+        "  |\n"
+        "  +-- otro caracter -> ERROR_LEXICO\n"
+        "\n"
+        "PALABRAS RESERVADAS:\n"
+        "MOVIE SCENE CHARACTER SAY CAMERA\n"
+        "MUSIC ACTION LOCATION CUT END\n"
+        "\n"
+        "REGLAS LEXICAS:\n"
+        "[0-9]+                   -> NUMERO\n"
+        "\"...\"                    -> CADENA\n"
+        "[a-zA-Z_][a-zA-Z0-9_]*  -> IDENTIFICADOR\n"
+        "//...                    -> COMENTARIO\n"
+    );
+
+    QLabel *notaAutomata =
         new QLabel(
-            "Nota: el diagrama mostrado es una representacion "
-            "conceptual del automata. FLEX genera automaticamente "
-            "el automata utilizado por el analizador."
+            "Nota: representacion conceptual. FLEX genera "
+            "el automata real a partir de las reglas de lexer.l."
         );
 
-    nota->setWordWrap(true);
+    notaAutomata->setWordWrap(true);
 
     layoutAutomata->addWidget(tituloAutomata);
     layoutAutomata->addWidget(explicacion);
     layoutAutomata->addWidget(automata);
-    layoutAutomata->addWidget(nota);
+    layoutAutomata->addWidget(notaAutomata);
 
     // =====================================================
-    // AGREGAR PESTAÑAS
+    // PESTAÑA 3: GRAMATICA
+    // =====================================================
+
+    QWidget *paginaGramatica =
+        new QWidget();
+
+    QVBoxLayout *layoutGramatica =
+        new QVBoxLayout(paginaGramatica);
+
+    QLabel *tituloGramatica =
+        new QLabel(
+            "GRAMATICA DEL LENGUAJE MOVIESCRIPT"
+        );
+
+    tituloGramatica->setStyleSheet(
+        "font-size: 22px;"
+        "font-weight: bold;"
+        "padding: 10px;"
+    );
+
+    QLabel *explicacionGramatica =
+        new QLabel(
+            "Estas reglas definen la estructura que debe "
+            "tener un programa para que el analizador "
+            "sintactico lo acepte."
+        );
+
+    explicacionGramatica->setWordWrap(true);
+
+    QTextEdit *gramatica =
+        new QTextEdit();
+
+    gramatica->setReadOnly(true);
+
+    gramatica->setStyleSheet(
+        "font-family: Consolas, monospace;"
+        "font-size: 14px;"
+    );
+
+    gramatica->setPlainText(
+        "             GRAMATICA MOVIESCRIPT\n"
+        "================================================\n"
+        "\n"
+        "PROGRAMA\n"
+        "  -> MOVIE CADENA ESCENAS END\n"
+        "\n"
+        "ESCENAS\n"
+        "  -> ESCENA ESCENAS\n"
+        "  -> ESCENA\n"
+        "\n"
+        "ESCENA\n"
+        "  -> SCENE NUMERO ELEMENTOS\n"
+        "\n"
+        "ELEMENTOS\n"
+        "  -> CHARACTER IDENTIFICADOR\n"
+        "  -> LOCATION IDENTIFICADOR\n"
+        "  -> SAY CADENA\n"
+        "  -> ACTION IDENTIFICADOR\n"
+        "  -> CAMERA IDENTIFICADOR\n"
+        "  -> MUSIC IDENTIFICADOR\n"
+        "  -> CUT\n"
+        "\n"
+        "================================================\n"
+        "\n"
+        "EJEMPLO DE PROGRAMA:\n"
+        "\n"
+        "MOVIE \"El Viaje\"\n"
+        "\n"
+        "SCENE 10\n"
+        "CHARACTER HERO\n"
+        "LOCATION CASTLE\n"
+        "SAY \"Tenemos que luchar.\"\n"
+        "ACTION RUN\n"
+        "CAMERA CLOSEUP\n"
+        "MUSIC DRAMATIC\n"
+        "CUT\n"
+        "\n"
+        "END\n"
+        "\n"
+        "================================================\n"
+        "\n"
+        "REGLAS DEL LENGUAJE:\n"
+        "\n"
+        "1. El programa comienza con MOVIE y una CADENA.\n"
+        "2. Cada escena comienza con SCENE y un NUMERO.\n"
+        "3. Cada escena debe contener al menos un elemento.\n"
+        "4. CHARACTER necesita un IDENTIFICADOR.\n"
+        "5. LOCATION necesita un IDENTIFICADOR.\n"
+        "6. SAY necesita una CADENA entre comillas.\n"
+        "7. ACTION necesita un IDENTIFICADOR.\n"
+        "8. CAMERA necesita un IDENTIFICADOR.\n"
+        "9. MUSIC necesita un IDENTIFICADOR.\n"
+        "10. END es obligatorio al final del programa.\n"
+        "\n"
+        "El parser verifica estas estructuras mediante\n"
+        "analisis sintactico descendente recursivo.\n"
+    );
+
+    layoutGramatica->addWidget(tituloGramatica);
+    layoutGramatica->addWidget(explicacionGramatica);
+    layoutGramatica->addWidget(gramatica);
+
+    // =====================================================
+    // AGREGAR LAS TRES PESTANAS
     // =====================================================
 
     pestanas->addTab(
@@ -259,6 +375,11 @@ int main(int argc, char *argv[])
     pestanas->addTab(
         paginaAutomata,
         "AUTOMATA"
+    );
+
+    pestanas->addTab(
+        paginaGramatica,
+        "GRAMATICA"
     );
 
     // =====================================================
@@ -274,14 +395,16 @@ int main(int argc, char *argv[])
                 editor->toPlainText().toStdString()
             );
 
+            ResultadoSintactico resultado =
+                analizarSintaxis(tokens);
+
             tabla->setRowCount(0);
 
-            int errores = 0;
+            int erroresLexicos = 0;
 
             for (const Token &token : tokens)
             {
-                int fila =
-                    tabla->rowCount();
+                int fila = tabla->rowCount();
 
                 tabla->insertRow(fila);
 
@@ -289,9 +412,7 @@ int main(int argc, char *argv[])
                     fila,
                     0,
                     new QTableWidgetItem(
-                        QString::fromStdString(
-                            token.lexema
-                        )
+                        QString::fromStdString(token.lexema)
                     )
                 );
 
@@ -299,9 +420,7 @@ int main(int argc, char *argv[])
                     fila,
                     1,
                     new QTableWidgetItem(
-                        QString::fromStdString(
-                            token.tipo
-                        )
+                        QString::fromStdString(token.tipo)
                     )
                 );
 
@@ -309,45 +428,65 @@ int main(int argc, char *argv[])
                     fila,
                     2,
                     new QTableWidgetItem(
-                        QString::number(
-                            token.linea
-                        )
+                        QString::number(token.linea)
                     )
                 );
 
-                if (token.tipo ==
-                    "ERROR_LEXICO")
+                if (token.tipo == "ERROR_LEXICO")
                 {
-                    errores++;
+                    erroresLexicos++;
                 }
             }
 
             totalTokens->setText(
                 "Tokens: " +
-                QString::number(
-                    tokens.size()
-                )
+                QString::number(tokens.size())
             );
 
             totalErrores->setText(
-                "Errores: " +
-                QString::number(
-                    errores
-                )
+                "Errores lexicos: " +
+                QString::number(erroresLexicos)
             );
 
-            if (errores == 0)
+            if (erroresLexicos == 0)
             {
                 estado->setText(
-                    "Estado: ANALISIS CORRECTO"
+                    "Lexico: CORRECTO"
                 );
             }
             else
             {
                 estado->setText(
-                    "Estado: CON ERRORES LEXICOS"
+                    "Lexico: CON ERRORES"
                 );
             }
+
+            if (resultado.correcto)
+            {
+                estadoSintactico->setText(
+                    "Sintaxis: CORRECTA"
+                );
+            }
+            else
+            {
+                QString textoError =
+                    "Sintaxis: ERROR";
+
+                if (resultado.linea > 0)
+                {
+                    textoError +=
+                        " - Linea " +
+                        QString::number(resultado.linea);
+                }
+
+                estadoSintactico->setText(textoError);
+            }
+
+            QMessageBox::information(
+                &ventana,
+                "Resultado del analisis sintactico",
+                QString::fromStdString(resultado.mensaje)
+            );
         }
     );
 
@@ -361,25 +500,20 @@ int main(int argc, char *argv[])
         [&]()
         {
             editor->clear();
-
             tabla->setRowCount(0);
 
-            totalTokens->setText(
-                "Tokens: 0"
-            );
+            totalTokens->setText("Tokens: 0");
+            totalErrores->setText("Errores lexicos: 0");
+            estado->setText("Lexico: Sin analizar");
 
-            totalErrores->setText(
-                "Errores: 0"
-            );
-
-            estado->setText(
-                "Estado: Listo"
+            estadoSintactico->setText(
+                "Sintaxis: Sin analizar"
             );
         }
     );
 
     // =====================================================
-    // BOTON EJEMPLO
+    // BOTON CARGAR EJEMPLO
     // =====================================================
 
     QObject::connect(
@@ -411,14 +545,15 @@ int main(int argc, char *argv[])
     );
 
     // =====================================================
-    // VENTANA
+    // MOSTRAR VENTANA
     // =====================================================
 
     layoutPrincipal->addWidget(titulo);
     layoutPrincipal->addWidget(descripcion);
     layoutPrincipal->addWidget(pestanas);
+
     ventana.show();
 
     return app.exec();
-}
 
+}

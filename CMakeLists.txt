@@ -10,6 +10,7 @@ find_package(Qt6 REQUIRED COMPONENTS Widgets)
 add_executable(MovieScript
     main.cpp
     lexer.cpp
+    parser.cpp
 )
 
 target_link_libraries(MovieScript

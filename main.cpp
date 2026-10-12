@@ -13,9 +13,11 @@
 #include <QMessageBox>
 #include <QStringList>
 #include <QTableWidgetItem>
+#include <QAbstractItemView>
 
 #include "lexer.h"
 #include "parser.h"
+#include "semantic.h"
 
 int main(int argc, char *argv[])
 {
@@ -23,7 +25,7 @@ int main(int argc, char *argv[])
 
     QWidget ventana;
     ventana.setWindowTitle(
-        "MovieScript - Analizador Lexico y Sintactico"
+        "MovieScript - Analizador Lexico, Sintactico y Semantico"
     );
     ventana.resize(1150, 800);
 
@@ -32,7 +34,7 @@ int main(int argc, char *argv[])
 
     QLabel *titulo =
         new QLabel(
-            "MOVIESCRIPT - ANALIZADOR LEXICO Y SINTACTICO"
+            "MOVIESCRIPT - ANALIZADOR LEXICO, SINTACTICO Y SEMANTICO"
         );
 
     titulo->setStyleSheet(
@@ -43,15 +45,15 @@ int main(int argc, char *argv[])
 
     QLabel *descripcion =
         new QLabel(
-            "Analizador lexico con FLEX y analizador "
-            "sintactico descendente recursivo en C++."
+            "Analizador lexico con FLEX, analizador sintactico "
+            "descendente recursivo y analizador semantico en C++."
         );
 
     QTabWidget *pestanas =
         new QTabWidget();
 
     // =====================================================
-    // PESTAÑA 1: ANALIZADOR
+    // PESTANA 1: ANALIZADOR
     // =====================================================
 
     QWidget *paginaAnalizador =
@@ -122,16 +124,14 @@ int main(int argc, char *argv[])
                 << "Token"
                 << "Linea";
 
-    tabla->setHorizontalHeaderLabels(
-        encabezados
+    tabla->setHorizontalHeaderLabels(encabezados);
+
+    tabla->horizontalHeader()->setSectionResizeMode(
+        QHeaderView::Stretch
     );
 
-    tabla->horizontalHeader()
-         ->setSectionResizeMode(
-             QHeaderView::Stretch
-         );
-
     tabla->setAlternatingRowColors(true);
+
     tabla->setEditTriggers(
         QAbstractItemView::NoEditTriggers
     );
@@ -154,10 +154,14 @@ int main(int argc, char *argv[])
     QLabel *estadoSintactico =
         new QLabel("Sintaxis: Sin analizar");
 
+    QLabel *estadoSemantico =
+        new QLabel("Semantica: Sin analizar");
+
     infoLayout->addWidget(totalTokens);
     infoLayout->addWidget(totalErrores);
     infoLayout->addWidget(estado);
     infoLayout->addWidget(estadoSintactico);
+    infoLayout->addWidget(estadoSemantico);
 
     layoutAnalizador->addWidget(codigoLabel);
     layoutAnalizador->addWidget(editor);
@@ -166,7 +170,7 @@ int main(int argc, char *argv[])
     layoutAnalizador->addWidget(informacion);
 
     // =====================================================
-    // PESTAÑA 2: AUTOMATA LEXICO
+    // PESTANA 2: AUTOMATA LEXICO
     // =====================================================
 
     QWidget *paginaAutomata =
@@ -216,6 +220,7 @@ int main(int argc, char *argv[])
         "IDENTIFICADOR\n"
         "  letras, digitos y guion bajo\n"
         "\n"
+        "INICIO\n"
         "  |\n"
         "  | digito\n"
         "  v\n"
@@ -224,17 +229,15 @@ int main(int argc, char *argv[])
         "\n"
         "INICIO\n"
         "  |\n"
-        "  | comilla doble (\")\n"
+        "  | comilla doble\n"
         "  v\n"
         "CADENA\n"
-        "  |\n"
-        "  +-- espacios y tabulaciones -> IGNORAR\n"
-        "  |\n"
-        "  +-- salto de linea -> CONTAR LINEA\n"
-        "  |\n"
-        "  +-- // -> COMENTARIO\n"
-        "  |\n"
-        "  +-- otro caracter -> ERROR_LEXICO\n"
+        "  acepta texto entre comillas\n"
+        "\n"
+        "ESPACIOS Y TABULACIONES -> IGNORAR\n"
+        "SALTO DE LINEA             -> CONTAR LINEA\n"
+        "//                         -> COMENTARIO\n"
+        "CARACTER NO VALIDO         -> ERROR_LEXICO\n"
         "\n"
         "PALABRAS RESERVADAS:\n"
         "MOVIE SCENE CHARACTER SAY CAMERA\n"
@@ -261,7 +264,7 @@ int main(int argc, char *argv[])
     layoutAutomata->addWidget(notaAutomata);
 
     // =====================================================
-    // PESTAÑA 3: GRAMATICA
+    // PESTANA 3: GRAMATICA
     // =====================================================
 
     QWidget *paginaGramatica =
@@ -346,14 +349,13 @@ int main(int argc, char *argv[])
         "\n"
         "1. El programa comienza con MOVIE y una CADENA.\n"
         "2. Cada escena comienza con SCENE y un NUMERO.\n"
-        "3. Cada escena debe contener al menos un elemento.\n"
+        "3. Cada escena debe contener elementos validos.\n"
         "4. CHARACTER necesita un IDENTIFICADOR.\n"
         "5. LOCATION necesita un IDENTIFICADOR.\n"
         "6. SAY necesita una CADENA entre comillas.\n"
         "7. ACTION necesita un IDENTIFICADOR.\n"
         "8. CAMERA necesita un IDENTIFICADOR.\n"
         "9. MUSIC necesita un IDENTIFICADOR.\n"
-        "10. END es obligatorio al final del programa.\n"
         "\n"
         "El parser verifica estas estructuras mediante\n"
         "analisis sintactico descendente recursivo.\n"
@@ -364,22 +366,102 @@ int main(int argc, char *argv[])
     layoutGramatica->addWidget(gramatica);
 
     // =====================================================
-    // AGREGAR LAS TRES PESTANAS
+    // PESTANA 4: ANALISIS SEMANTICO
     // =====================================================
 
-    pestanas->addTab(
+    QWidget *paginaSemantica =
+        new QWidget();
+
+    QVBoxLayout *layoutSemantica =
+        new QVBoxLayout(paginaSemantica);
+
+    QLabel *tituloSemantica =
+        new QLabel(
+            "ANALIZADOR SEMANTICO DE MOVIESCRIPT"
+        );
+
+    tituloSemantica->setStyleSheet(
+        "font-size: 22px;"
+        "font-weight: bold;"
+        "padding: 10px;"
+    );
+
+    QLabel *explicacionSemantica =
+        new QLabel(
+            "El analizador semantico comprueba reglas que "
+            "van mas alla de la estructura del programa. "
+            "Verifica que los numeros de escena no se repitan, "
+            "que no se declare dos veces el mismo personaje "
+            "en una escena y que cada escena tenga como maximo "
+            "una ubicacion."
+        );
+
+    explicacionSemantica->setWordWrap(true);
+
+    QTextEdit *reglasSemanticas =
+        new QTextEdit();
+
+    reglasSemanticas->setReadOnly(true);
+
+    reglasSemanticas->setStyleSheet(
+        "font-family: Consolas, monospace;"
+        "font-size: 14px;"
+    );
+
+    reglasSemanticas->setPlainText(
+        "REGLAS SEMANTICAS DE MOVIESCRIPT\n"
+        "========================================\n"
+        "\n"
+        "1. Los numeros de escena deben ser unicos.\n"
+        "\n"
+        "2. No se puede declarar dos veces el mismo\n"
+        "   personaje dentro de una escena.\n"
+        "\n"
+        "3. Una escena puede tener como maximo una\n"
+        "   ubicacion LOCATION.\n"
+        "\n"
+        "4. No se permiten instrucciones despues de CUT\n"
+        "   dentro de una escena.\n"
+        "\n"
+        "El analizador sintactico debe aceptar el programa\n"
+
+
+        "antes de ejecutar el analisis semantico.\n"
+    );
+
+    layoutSemantica->addWidget(tituloSemantica);
+    layoutSemantica->addWidget(explicacionSemantica);
+    layoutSemantica->addWidget(reglasSemanticas);
+
+    // =====================================================
+    // AGREGAR LAS CUATRO PESTANAS
+    // =====================================================
+
+
+pestanas->addTab(
         paginaAnalizador,
         "ANALIZADOR"
+
     );
+
 
     pestanas->addTab(
         paginaAutomata,
         "AUTOMATA"
+
     );
+
 
     pestanas->addTab(
         paginaGramatica,
         "GRAMATICA"
+    );
+
+
+    pestanas->addTab(
+        paginaSemantica,
+        "SEMANTICA"
+
     );
 
     // =====================================================
@@ -397,6 +479,24 @@ int main(int argc, char *argv[])
 
             ResultadoSintactico resultado =
                 analizarSintaxis(tokens);
+
+            ResultadoSemantico resultadoSemantico;
+
+            if (resultado.correcto)
+            {
+                resultadoSemantico =
+                    analizarSemantica(tokens);
+            }
+            else
+            {
+                resultadoSemantico = {
+                    false,
+                    "Analisis semantico omitido: "
+                    "primero debe corregirse el error "
+                    "lexico o sintactico.",
+                    resultado.linea
+                };
+            }
 
             tabla->setRowCount(0);
 
@@ -448,6 +548,8 @@ int main(int argc, char *argv[])
                 QString::number(erroresLexicos)
             );
 
+            // Resultado lexico
+
             if (erroresLexicos == 0)
             {
                 estado->setText(
@@ -460,6 +562,8 @@ int main(int argc, char *argv[])
                     "Lexico: CON ERRORES"
                 );
             }
+
+            // Resultado sintactico
 
             if (resultado.correcto)
             {
@@ -479,13 +583,58 @@ int main(int argc, char *argv[])
                         QString::number(resultado.linea);
                 }
 
-                estadoSintactico->setText(textoError);
+                estadoSintactico->setText(
+                    textoError
+                );
             }
+
+            // Resultado semantico
+
+            if (resultadoSemantico.correcto)
+            {
+                estadoSemantico->setText(
+                    "Semantica: CORRECTA"
+                );
+            }
+            else
+            {
+                QString textoError =
+                    "Semantica: ERROR";
+
+                if (resultadoSemantico.linea > 0)
+                {
+                    textoError +=
+                        " - Linea " +
+                        QString::number(
+                            resultadoSemantico.linea
+                        );
+                }
+
+                estadoSemantico->setText(
+                    textoError
+                );
+            }
+
+            // Mostrar los resultados de ambos analizadores
+
+            QString resumen =
+                "Analisis sintactico:\n" +
+                QString::fromStdString(
+                    resultado.mensaje
+                );
+
+            resumen +=
+                "\n\nAnalisis semantico:\n";
+
+            resumen +=
+                QString::fromStdString(
+                    resultadoSemantico.mensaje
+                );
 
             QMessageBox::information(
                 &ventana,
-                "Resultado del analisis sintactico",
-                QString::fromStdString(resultado.mensaje)
+                "Resultados del analisis",
+                resumen
             );
         }
     );
@@ -504,10 +653,17 @@ int main(int argc, char *argv[])
 
             totalTokens->setText("Tokens: 0");
             totalErrores->setText("Errores lexicos: 0");
-            estado->setText("Lexico: Sin analizar");
+
+            estado->setText(
+                "Lexico: Sin analizar"
+            );
 
             estadoSintactico->setText(
                 "Sintaxis: Sin analizar"
+            );
+
+            estadoSemantico->setText(
+                "Semantica: Sin analizar"
             );
         }
     );
@@ -555,5 +711,4 @@ int main(int argc, char *argv[])
     ventana.show();
 
     return app.exec();
-
 }

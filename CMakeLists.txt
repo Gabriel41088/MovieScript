@@ -11,6 +11,7 @@ add_executable(MovieScript
     main.cpp
     lexer.cpp
     parser.cpp
+    semantic.cpp
 )
 
 target_link_libraries(MovieScript
